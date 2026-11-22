@@ -26,14 +26,26 @@ const agents = [
 ];
 
 const running = [];
+let stopping = false;
+const startupDone = Promise.withResolvers();
+let shutdown;
+// Register before opening any agent. A signal during start waits for that attempt
+// to finish, then closes everything it opened; don't start the next agent.
+for (const signal of ['SIGINT', 'SIGTERM']) {
+  process.once(signal, () => {
+    stopping = true;
+    shutdown ??= startupDone.promise.then(() => Promise.all(running.map((agent) => agent.close())));
+    shutdown.then(() => process.exit(0), () => process.exit(1));
+  });
+}
 try {
-  for (const agent of agents) running.push(await startAgent(agent, { models, model }));
+  for (const agent of agents) {
+    if (stopping) break;
+    running.push(await startAgent(agent, { models, model }));
+  }
 } catch (error) {
   await Promise.allSettled(running.map((agent) => agent.close()));
   throw error;
-}
-for (const signal of ['SIGINT', 'SIGTERM']) {
-  process.once(signal, () => {
-    Promise.all(running.map((agent) => agent.close())).then(() => process.exit(0), () => process.exit(1));
-  });
+} finally {
+  startupDone.resolve();
 }

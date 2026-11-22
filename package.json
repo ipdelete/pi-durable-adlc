@@ -17,6 +17,6 @@
     "@earendil-works/pi-durable": "1.6.0",
     "@earendil-works/pi-schema": "1.6.0",
     "@vscode/tree-sitter-wasm": "0.3.1",
-    "pi-durable-a2a": "github:ianphil/pi-durable-a2a#ca6ff6dd44aa94040ee408770b6e2a0989c80418"
+    "pi-durable-a2a": "https://github.com/ianphil/pi-durable-a2a/releases/download/v0.2.0/pi-durable-a2a-0.2.0.tgz"
   }
 }

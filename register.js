@@ -1,18 +1,27 @@
-// Operator step: publish Floe's backlog agent in the fleet's LiteLLM A2A gateway, or withdraw it.
-// Uses LiteLLM's administrative key, which the running agent never reads.
+// Operator step: publish an agent in the fleet's LiteLLM A2A gateway, or withdraw it.
+// Uses LiteLLM's administrative key, which the running agents never read.
+//   node register.js <intake|investigator> [--withdraw]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { liteLLMRegistry } from 'pi-durable-a2a/litellm';
-import { directory, identity, listenerToken, port, tailscaleAddress } from './backlog.js';
+import { card, listenerToken, stateDirectory, tailscaleAddress } from './agent-host/index.js';
+import { identity as intake } from './agents/intake/index.js';
+import { identity as investigator } from './agents/investigator/index.js';
 
+const identities = { intake, investigator };
+const identity = identities[process.argv.slice(2).find((arg) => !arg.startsWith('-'))];
+if (!identity) throw new Error(`Usage: node register.js <${Object.keys(identities).join('|')}> [--withdraw]`);
+
+const directory = stateDirectory(identity);
 const registry = liteLLMRegistry({
   url: process.env.LITELLM_URL ?? 'http://bigbertha:4000',
   adminKeyFile: process.env.LITELLM_ADMIN_KEY_FILE ?? join(homedir(), '.config/pi-a2a/admin-key'),
   teamId: process.env.LITELLM_TEAM_ID ?? '045b989a-4ed3-4492-b7a4-ca1884cd876f',
-  grantLockDirectory: join(directory, 'grant-lock'),
+  // Shared by all agents here: grants on the same team must be updated one at a time.
+  grantLockDirectory: join(dirname(directory), 'grant-lock'),
 });
-const agent = { ...identity, listener: `http://${tailscaleAddress()}:${port}`, token: listenerToken() };
+const agent = { ...card(identity), listener: `http://${tailscaleAddress()}:${identity.port}`, token: listenerToken(directory) };
 const file = join(directory, 'registration.json');
 let saved;
 try {

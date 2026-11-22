@@ -3,7 +3,7 @@ import { obj, str } from '@earendil-works/pi-schema';
 
 export const repo = 'ipdelete/floe';
 
-/** A minimal GitHub REST client for intake's own tools, authenticated as the gh login. */
+/** A minimal GitHub REST client for the agents' own tools, authenticated as the gh login. */
 export function githubClient(token) {
   return async function github(path, body) {
     const response = await fetch(`https://api.github.com${path}`, {
@@ -45,14 +45,14 @@ export function searchFeaturesTool(github) {
  * Publish a Floe issue. `create` decides what to post and returns the issue URL, so callers
  * can add provenance or guard against publishing twice.
  */
-export function createFeatureIssueTool(create, { terminate = false } = {}) {
+export function createFeatureIssueTool(create) {
   return defineTool({
     name: 'create_feature_issue',
     description: 'Publish an issue with the supplied title and description.',
     parameters: obj({ title: str(), description: str() }),
     async execute({ title, description }) {
       const url = await create({ title, description });
-      return { output: [{ type: 'text', text: url }], ...(terminate ? { control: { terminate: true } } : {}) };
+      return { output: [{ type: 'text', text: url }] };
     },
   });
 }

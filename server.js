@@ -53,7 +53,7 @@ async function intake({ title, description }) {
   const storage = await openNodeSqliteStorage(join(directory, `${session}.sqlite`));
   const harness = await Harness.open(storage, {
     models, registry,
-    env: () => new NodeExecutionEnv({ cwd: fileURLToPath(new URL('../../', import.meta.url)) }),
+    env: () => new NodeExecutionEnv({ cwd: fileURLToPath(new URL('./', import.meta.url)) }),
     settings: { toolExecution: 'sequential', stream: { timeoutMs: 60_000 } },
   }, context);
   try {

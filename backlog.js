@@ -70,7 +70,7 @@ export async function startBacklogAgent({ models, model, github }) {
   ] }));
   const harness = await Harness.open(await openNodeSqliteStorage(join(directory, 'durable.sqlite')), {
     models, registry,
-    env: () => new NodeExecutionEnv({ cwd: fileURLToPath(new URL('../../', import.meta.url)) }),
+    env: () => new NodeExecutionEnv({ cwd: fileURLToPath(new URL('./', import.meta.url)) }),
     settings: { toolExecution: 'sequential', stream: { timeoutMs: 60_000 } },
   }, context);
   try {

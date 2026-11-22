@@ -1,4 +1,10 @@
-# Floe intake
+# Pi Durable ADLC
+
+Pi Durable agents for the agentic development lifecycle. The current agents
+handle feature intake and backlog work for [`ipdelete/floe`](https://github.com/ipdelete/floe).
+This project is independent of Floe; Floe does not depend on it.
+
+## Floe intake
 
 `server.js` runs two Pi Durable agents for `ipdelete/floe`, sharing the same
 GitHub tools and guarded `bash`:
@@ -17,7 +23,8 @@ and `PI_MODEL` when set; otherwise it uses `github-copilot` / `gpt-6.2-sol`.
 `INTAKE_MODEL` can override the model ID.
 
 ```sh
-cd tools/intake
+git clone https://github.com/ipdelete/pi-durable-adlc.git
+cd pi-durable-adlc
 npm ci --ignore-scripts
 npm start
 ```
@@ -83,7 +90,7 @@ run `gh`, including `gh api` writes, with the server's GitHub login.
 ## Bash guard
 
 `bash-guard.js` provides a Pi Durable `beforeTool` hook applied to both agents'
-`bash` tools. Bash runs locally from the Floe repository root, using the server's
+`bash` tools. Bash runs locally from this repository root, using the server's
 inherited environment and GitHub CLI authentication. Bash and any helpers the
 agent uses must be installed on the host.
 
@@ -116,7 +123,7 @@ GitHub. The hook does not isolate the host, constrain credentials or repositorie
 or control subprocesses launched internally by approved programs. Host binaries
 and the inherited environment must be trusted. Other tools are unaffected.
 
-Run the tests with `npm test` from `tools/intake`. They use the real Durable
+Run the tests with `npm test` from the repository root. They use the real Durable
 harness, Bash, `gh --version`, and shell helpers with a scripted model; they do
 not need a model login or make GitHub network requests. The WASM dependency
 requires no native build or npm install scripts.

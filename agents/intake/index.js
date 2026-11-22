@@ -5,6 +5,7 @@ import { defineExtension } from '@earendil-works/pi-durable';
 import { createBashTool } from '@earendil-works/pi-durable/tools';
 import { BashGuard } from '../../shared/bash-guard.js';
 import { createFeatureIssueTool, repo, searchFeaturesTool } from '../../shared/github.js';
+import { SingleFiling } from './single-filing.js';
 
 export const identity = {
   name: 'intake',
@@ -28,7 +29,7 @@ export function createIntake({ github }) {
     instructions,
     maxTurns: 12,
     cwd: fileURLToPath(new URL('../../', import.meta.url)),
-    extensions: [BashGuard, defineExtension({ name: 'intake', tools: [
+    extensions: [BashGuard, SingleFiling, defineExtension({ name: 'intake', tools: [
       createBashTool(),
       searchFeaturesTool(github),
       createFeatureIssueTool(async ({ title, description }) => {

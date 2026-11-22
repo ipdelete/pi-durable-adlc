@@ -52,8 +52,12 @@ Searches, reads and summarizes `ipdelete/floe` issues, checks a feature idea for
 duplicates and files it with `create_feature_issue` when asked. Its `bash` tool
 runs from this repository root under the [Bash guard](#bash-guard). Its
 instructions forbid changing issues through `bash`, but the guard does not
-enforce that. Submit only text suitable for a public issue. If filing errors,
-check GitHub before retrying; there is no deduplication guarantee.
+enforce that. A separate intake hook allows only one `create_feature_issue`
+attempt per input, using Durable's recorded history (including failed attempts).
+This requires the host's sequential tool execution and A2A-only inputs; later
+requests may file new issues. It is not GitHub-side idempotency or deduplication:
+if filing errors, check GitHub before retrying. Submit only text suitable for a
+public issue.
 
 ## Investigator (`investigator`, port 8767)
 

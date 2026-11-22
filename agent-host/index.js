@@ -64,31 +64,47 @@ export async function startAgent(agent, { models, model, host = tailscaleAddress
     env: () => new NodeExecutionEnv({ cwd: agent.cwd }),
     settings: { toolExecution: 'sequential', stream: { timeoutMs: 60_000 } },
   }, context);
+  let a2a;
+  let server;
+  let closing;
+  // Stop admission first; A2A joins accepted Durable calls before the Harness closes.
+  // The HTTP close callback also joins response writes before the host can exit.
+  function close() {
+    return closing ??= (async () => {
+      const httpClosed = server ? new Promise((resolve) => {
+        server.close(() => resolve());
+        server.closeAllConnections();
+      }) : Promise.resolve();
+      try {
+        await a2a?.close();
+      } finally {
+        try {
+          await harness.close(context);
+        } finally {
+          await httpClosed;
+        }
+      }
+    })();
+  }
   try {
     const settings = { model, instructions: agent.instructions, maxTurns: agent.maxTurns };
     const conversation = await harness.root(context, { agent: settings });
     // Root options apply only when the conversation is created; refresh them on every start.
     await conversation.configure(settings, context);
-    const a2a = new A2AHandler({
+    a2a = new A2AHandler({
       harness, conversation,
       card: { ...card(agent), url: `http://${host}:${agent.port}/a2a` },
     });
     harness.resume();
-    const server = createA2AServer(a2a, {
+    server = createA2AServer(a2a, {
       token, extraRoutes: { '/': liteLLMTaskHandler(a2a) },
     });
     await new Promise((resolve, reject) => server.once('error', reject).listen(agent.port, host, resolve));
     console.log(`${agent.name} listening at http://${host}:${agent.port}/a2a`);
-    return {
-      async close() {
-        server.close();
-        server.closeAllConnections();
-        await a2a.close();
-        await harness.close(context);
-      },
-    };
+    return { close };
   } catch (error) {
-    await harness.close(context);
+    // Preserve the startup failure even if cleanup also fails.
+    await close().catch(() => {});
     throw error;
   }
 }

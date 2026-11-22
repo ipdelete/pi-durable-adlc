@@ -1,7 +1,14 @@
 import { defineTool } from '@earendil-works/pi-durable';
 import { obj, str } from '@earendil-works/pi-schema';
 
-export const repo = 'ipdelete/floe';
+/** Accept only owner/name, not URLs, API paths, or search qualifiers. */
+export function repository(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\/[A-Za-z0-9_.-]+$/.test(value) ||
+      ['.', '..'].includes(value.split('/')[1])) {
+    throw new Error('Provide a GitHub repository as owner/name');
+  }
+  return value;
+}
 
 /** A minimal GitHub REST client for the agents' own tools, authenticated as the gh login. */
 export function githubClient(token) {
@@ -22,12 +29,13 @@ export function githubClient(token) {
   };
 }
 
-export function searchFeaturesTool(github) {
+export function searchIssuesTool(github) {
   return defineTool({
-    name: 'search_features',
-    description: 'Find open and closed Floe issues using up to three distinctive keywords.',
-    parameters: obj({ query: str() }),
-    async execute({ query }) {
+    name: 'search_issues',
+    description: 'Find open and closed issues in the specified GitHub repository using up to three distinctive keywords.',
+    parameters: obj({ repo: str(), query: str() }),
+    async execute({ repo, query }) {
+      repository(repo);
       const terms = query.match(/[\p{L}\p{N}]+/gu)?.slice(0, 3) ?? [];
       if (!terms.length) throw new Error('Provide at least one keyword');
       const q = `repo:${repo} is:issue (${terms.map((term) => `"${term}"`).join(' OR ')})`;
@@ -42,16 +50,17 @@ export function searchFeaturesTool(github) {
 }
 
 /**
- * Publish a Floe issue. `create` decides what to post and returns the issue URL, so callers
+ * Publish an issue. `create` decides what to post and returns the issue URL, so callers
  * can add provenance or guard against publishing twice.
  */
-export function createFeatureIssueTool(create) {
+export function createIssueTool(create) {
   return defineTool({
-    name: 'create_feature_issue',
-    description: 'Publish an issue with the supplied title and description.',
-    parameters: obj({ title: str(), description: str() }),
-    async execute({ title, description }) {
-      const url = await create({ title, description });
+    name: 'create_issue',
+    description: 'Publish an issue in the specified GitHub repository with the supplied title and description.',
+    parameters: obj({ repo: str(), title: str(), description: str() }),
+    async execute({ repo, title, description }) {
+      repository(repo);
+      const url = await create({ repo, title, description });
       return { output: [{ type: 'text', text: url }] };
     },
   });

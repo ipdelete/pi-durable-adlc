@@ -4,10 +4,10 @@ import { defineExtension, hook, ToolTask, ToolResultEntry, UserEntry } from '@ea
 // restart/compaction: allow one filing attempt per input, not one per conversation.
 // Even a failed attempt may have reached GitHub, so ask for inspection rather than retry.
 export const SingleFiling = defineExtension({
-  name: 'intake-single-filing',
+  name: 'backlog-single-filing',
   hooks: [hook(ToolTask, {
     async beforeTool(call, api, context) {
-      if (call.name !== 'create_feature_issue') return;
+      if (call.name !== 'create_issue') return;
       let cursor;
       do {
         const page = await api.entries({ order: 'descending' }, 100, cursor, context);
@@ -19,7 +19,7 @@ export const SingleFiling = defineExtension({
         }
         cursor = page.next;
       } while (cursor);
-      return { block: 'Cannot identify the intake request; do not file an issue.' };
+      return { block: 'Cannot identify the backlog request; do not file an issue.' };
     },
   })],
 });

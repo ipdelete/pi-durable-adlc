@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { ModelRuntime } from '@earendil-works/pi-coding-agent';
 import { startAgent } from './agent-host/index.js';
-import { createIntake } from './agents/intake/index.js';
+import { createBacklog } from './agents/backlog/index.js';
 import { createInvestigator } from './agents/investigator/index.js';
 import { githubClient } from './shared/github.js';
 
@@ -19,7 +19,7 @@ process.umask(0o077);
 
 const github = githubClient(execFileSync('gh', ['auth', 'token', '--hostname', 'github.com'], { encoding: 'utf8' }).trim());
 const agents = [
-  createIntake({ github }),
+  createBacklog({ github }),
   createInvestigator({
     workspace: process.env.INVESTIGATOR_WORKSPACE ?? fileURLToPath(new URL('.agents/investigator/workspace/', import.meta.url)),
   }),

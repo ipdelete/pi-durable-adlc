@@ -130,5 +130,5 @@ for (const command of blocked) {
 }
 
 test('the hook leaves other tools alone', () => {
-  assert.equal(BashGuard.hooks[0].handlers.beforeTool({ name: 'search_features', arguments: { query: 'tasks' } }), undefined);
+  assert.equal(BashGuard.hooks[0].handlers.beforeTool({ name: 'search_issues', arguments: { repo: 'example/project', query: 'tasks' } }), undefined);
 });

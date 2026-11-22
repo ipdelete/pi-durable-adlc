@@ -1,15 +1,15 @@
 // Operator step: publish an agent in the fleet's LiteLLM A2A gateway, or withdraw it.
 // Uses LiteLLM's administrative key, which the running agents never read.
-//   node register.js <intake|investigator> [--withdraw]
+//   node register.js <backlog|investigator> [--withdraw]
 import { readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { liteLLMRegistry } from 'pi-durable-a2a/litellm';
 import { card, listenerToken, stateDirectory, tailscaleAddress } from './agent-host/index.js';
-import { identity as intake } from './agents/intake/index.js';
+import { identity as backlog } from './agents/backlog/index.js';
 import { identity as investigator } from './agents/investigator/index.js';
 
-const identities = { intake, investigator };
+const identities = { backlog, investigator };
 const identity = identities[process.argv.slice(2).find((arg) => !arg.startsWith('-'))];
 if (!identity) throw new Error(`Usage: node register.js <${Object.keys(identities).join('|')}> [--withdraw]`);
 

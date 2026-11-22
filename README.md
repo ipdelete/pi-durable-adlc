@@ -1,18 +1,17 @@
 # Pi Durable ADLC
 
-Pi Durable agents for the agentic development lifecycle, served over A2A: an
-intake agent for the [`ipdelete/floe`](https://github.com/ipdelete/floe) backlog
-and a spike investigator. They use
+Pi Durable agents for the agentic development lifecycle, served over A2A: a
+backlog agent and a spike investigator, each working on the repository supplied
+in the request. They use
 [`pi-durable-a2a`](https://github.com/ianphil/pi-durable-a2a).
-This project is independent of Floe; Floe does not depend on it.
 
 ## Layout
 
 ```text
 agent-host/          serves one agent definition as a persistent Durable conversation over A2A
-agents/intake/       intake: Floe backlog and feature intake
+agents/backlog/      backlog: issues in a repository supplied per request
 agents/investigator/ investigator: bounded spikes on a given repo, in its own worktree
-shared/              GitHub client/tools and intake's Bash guard
+shared/              GitHub client/tools and backlog's Bash guard
 server.js            starts the agents
 register.js          gateway registration (operator step)
 ```
@@ -26,7 +25,7 @@ All agents are reached through A2A; there is no other HTTP API.
 ## Running
 
 Requires Node.js 22.19.0+, Pi with a saved `/login`, GitHub CLI signed in with
-permission to create issues in `ipdelete/floe`, and Tailscale connected (each
+permission to access the target repositories, and Tailscale connected (each
 listener binds the machine's Tailscale address). Agents use `PI_PROVIDER` and
 `PI_MODEL` when set; otherwise `github-copilot` / `gpt-6.2-sol`. `AGENT_MODEL`
 overrides the model ID.
@@ -46,18 +45,27 @@ policy. All foreground work in a conversation must come through A2A: Durable
 cancellation unsafe. See the
 [`pi-durable-a2a` semantics](https://github.com/ianphil/pi-durable-a2a#semantics).
 
-## Intake (`intake`, port 8766)
+## Backlog (`backlog`, port 8766)
 
-Searches, reads and summarizes `ipdelete/floe` issues, checks a feature idea for
-duplicates and files it with `create_feature_issue` when asked. Its `bash` tool
-runs from this repository root under the [Bash guard](#bash-guard). Its
-instructions forbid changing issues through `bash`, but the guard does not
-enforce that. A separate intake hook allows only one `create_feature_issue`
+Searches, reads and summarizes issues, checks an idea for duplicates and files
+it when asked. Specify the repository in each request, for example:
+
+> Add a feature to `owner/project`: create a workflow from a Python file and a schedule.
+
+There is no default repository; instructions require clarification when it is
+missing or ambiguous. `search_issues` and `create_issue` both require a validated
+`repo` argument (`owner/name`). Repository scoping is not an authorization policy:
+the tools can use any repository accessible to the server's GitHub login.
+
+Its `bash` tool runs from this repository root under the [Bash guard](#bash-guard).
+Instructions require explicit repository arguments and forbid changing issues
+through `bash`, but the guard does not enforce those rules.
+A separate backlog hook allows only one `create_issue`
 attempt per input, using Durable's recorded history (including failed attempts).
 This requires the host's sequential tool execution and A2A-only inputs; later
 requests may file new issues. It is not GitHub-side idempotency or deduplication:
 if filing errors, check GitHub before retrying. Submit only text suitable for a
-public issue.
+public issue. Batch creation and sub-issue linking are not supported yet.
 
 ## Investigator (`investigator`, port 8767)
 
@@ -82,8 +90,8 @@ no LiteLLM admin key on that account), not by hooks.
 ## Registration
 
 ```sh
-npm run register -- intake          # or investigator; needs ~/.config/pi-a2a/admin-key
-npm run withdraw -- intake          # removes the registration and its team grant
+npm run register -- backlog         # or investigator; needs ~/.config/pi-a2a/admin-key
+npm run withdraw -- backlog         # removes the registration and its team grant
 ```
 
 Registration uses LiteLLM's administrative key and runs as a separate operator
@@ -91,24 +99,17 @@ step, after the agent has started; the server never reads it. `LITELLM_URL`,
 `LITELLM_ADMIN_KEY_FILE` and `LITELLM_TEAM_ID` override the fleet defaults.
 Registrations here share one grant lock; run fleet registrations elsewhere one at
 a time. Talk to an agent from Pi with the `pi-a2a` extension: register the Pi
-session, then use `a2a_send` with the agent's name (`intake`, `investigator`).
+session, then use `a2a_send` with the agent's name (`backlog`, `investigator`).
 
 **Anyone with a fleet gateway key can ask these agents to read files** they can
-open, including the admin key file above and GitHub CLI credentials. Intake can
+open, including the admin key file above and GitHub CLI credentials. Backlog can
 run `gh`, including `gh api` writes, with the server's GitHub login; the
 investigator can run arbitrary code with that login.
-
-## Upgrading
-
-The `/intake` HTTP endpoint and the `floe-intake` name are gone; the agent is now
-`intake`, with fresh state in `.agents/intake/`. Withdraw the old `floe-intake`
-gateway registration (with the previous release's `npm run withdraw`), then
-register `intake`. Old state in `.intake/` is no longer read; archive or delete it.
 
 ## Bash guard
 
 `shared/bash-guard.js` provides the Pi Durable `beforeTool` hook applied to
-intake's `bash` tool. Bash runs locally from this repository root, using the server's
+backlog's `bash` tool. Bash runs locally from this repository root, using the server's
 inherited environment and GitHub CLI authentication. Bash and any helpers the
 agent uses must be installed on the host.
 
